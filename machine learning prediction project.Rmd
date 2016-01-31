@@ -1,0 +1,99 @@
+---
+title: "Machine Learning Prediction Project"
+author: "Lee Shee Chia"
+output: html_document
+---
+
+####Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+####Data
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+####Data Processing
+
+####Packages, Libraries, Seed
+```{r}
+library(caret)
+library(randomForest)
+library(rpart) 
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+
+set.seed(7714)
+
+```
+
+####Getting and Cleaning Data
+```{r}
+# Read data
+training <- read.csv("C:/Users/Guest/Desktop/R/module 8/pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+testing <- read.csv('C:/Users/Guest/Desktop/R/module 8/pml-testing.csv', na.strings=c("NA","#DIV/0!", ""))
+dim(training)
+dim(testing)
+
+# Delete columns with all missing values
+training <- training[,colSums(is.na(training)) == 0]
+testing <- testing[,colSums(is.na(testing)) == 0]
+
+# Delete variables which are irrelevant to project
+training <- training[,-c(1:7)]
+testing <- testing[,-c(1:7)]
+
+```
+
+####Partioning the training set
+
+To perform cross-validation, the training data set is partioned into 2 sets: subTraining (75%) and subTesting (25%).
+```{r}
+sub <- createDataPartition(y=training$classe, p=0.75, list=FALSE)
+subTraining <- training[sub, ] 
+subTesting <- training[-sub, ]
+
+```
+
+####Using ML algorithms for prediction: 1. Decision Tree
+```{r}
+modFit1 <- rpart(classe ~ ., data=subTraining, method="class")
+predict1 <- predict(modFit1, subTesting, type = "class")
+fancyRpartPlot(modFit1)
+confusionMatrix(predict1, subTesting$classe)
+
+```
+
+####Using ML algorithms for prediction: 2. Random Forest
+```{r}
+modFit2 <- randomForest(classe ~. , data=subTraining, method="class")
+predict2 <- predict(modFit2, subTesting, type = "class")
+confusionMatrix(predict2, subTesting$classe)
+
+```
+
+####Conclusion
+
+Random Forest is a better model compared to Decision Tree where accuracy : Random Forest model 0.9943 (95% CI: (0.9918, 0.9962)) ; Decision Tree model 0.7321 (95% CI: (0.7194, 0.7444)) 
+
+####Generating files for submission
+```{r}
+predictFit <- predict(modFit2, testing, type="class")
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(predictFit)
+```
+
